@@ -200,7 +200,7 @@ class NetworkSync extends Component {
   renderStatus() {
     return this.state.connectionStatus ? (
       <Status onClick={this.onClickOpen}>
-        {this.state.connectionStatus}
+        {`${this.state.connectionStatus}${this.state.isConnected ? ` | Session key: ${this.state.tokenInput}` : ''}`}
       </Status>
     ) : null;
   }
