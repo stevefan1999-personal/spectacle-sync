@@ -110,7 +110,7 @@ export const StatusText = styled('span')`
   font-weight: 500;
   margin: 35px;
   text-align: center;
-  text-transform: uppercase;
+  ${({ capped }) => capped ? 'text-transform: uppercase' : ''};
   line-height: 1;
   height: 24px;
 `;
