@@ -1,2 +1,1 @@
-import NetworkDeck from './NetworkDeck';
-export { NetworkDeck };
+export { NetworkDeck } from './NetworkDeck';
