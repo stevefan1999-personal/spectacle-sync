@@ -32,10 +32,10 @@
     "socket.io-client": "^2.1.1"
   },
   "peerDependencies": {
-    "prop-types": "^15.6.2",
-    "react": "^16.4.2",
-    "react-dom": "^16.4.2",
-    "spectacle": "^5.0.0"
+    "prop-types": "*",
+    "react": "*",
+    "react-dom": "*",
+    "spectacle": ">= 4.0.0"
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",
