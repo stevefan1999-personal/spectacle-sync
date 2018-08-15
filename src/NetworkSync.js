@@ -7,7 +7,7 @@ import SignalEffect from './SignalEffect';
 const makeChannelName = token => `Spectacle:${token.toUpperCase()}`;
 
 const initialState = () => ({
-  showConnectionMenu: true,
+  showConnectionMenu: false,
   isInputDisabled: false,
   isSlave: false,
   isConnected: false,
