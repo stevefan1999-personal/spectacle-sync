@@ -1,1 +1,1 @@
-export { NetworkDeck } from './NetworkDeck';
+export { default as NetworkDeck } from './NetworkDeck';
