@@ -9,6 +9,7 @@ const makeClientCounterMessage = count => count === 0
 class MasterManager {
   constructor(token, signalUri, setStatus, cb) {
     this.socket = io(signalUri, {
+      transports: ['websocket'],
       timeout: 3000,
       reconnection: true,
       reconnectionAttempts: Infinity,
@@ -24,6 +25,7 @@ class MasterManager {
     this.clientCounter = 0;
 
     this.socket.on('reconnect_attempt', () => {
+      this.socket.io.opts.transports = ['polling', 'websocket'];
       this.onReconnectAttempt();
     });
 
