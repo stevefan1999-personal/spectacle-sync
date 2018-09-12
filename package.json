@@ -1,5 +1,5 @@
 {
-  "name": "spectacle-sync",
+  "name": "@stevefan1999/spectacle-sync",
   "version": "1.2.0",
   "description": "💁 Present Spectacle presentations synchronised on multiple devices",
   "main": "lib/index.js",
@@ -18,12 +18,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/philpl/spectacle-sync.git"
+    "url": "git+https://github.com/stevefan1999/spectacle-sync.git"
   },
-  "author": "Phil Plückthun <phil@plckthn.me>",
+  "author": [
+    "Phil Plückthun <phil@plckthn.me>",
+    "Steve Fan"
+  ],
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/philpl/spectacle-sync/issues"
+    "url": "https://github.com/stevefan1999/spectacle-sync/issues"
   },
   "dependencies": {
     "emotion": "^9.2.6",
