@@ -1,15 +1,14 @@
-import io from 'socket.io-client/dist/socket.io.slim';
-import Peer from 'simple-peer';
-import { subscribe as subscribeToStorage } from './localStorageHook';
+import io from "socket.io-client/dist/socket.io.slim";
+import Peer from "simple-peer";
+import { subscribe as subscribeToStorage } from "./localStorageHook";
 
-const makeClientCounterMessage = count => count === 0
-  ? '⌛  Waiting for viewers'
-  : `🔴  ${count} connected viewers`;
+const makeClientCounterMessage = count =>
+  count === 0 ? "⌛  Waiting for viewers" : `🔴  ${count} connected viewers`;
 
 class MasterManager {
   constructor(token, signalUri, setStatus, cb) {
     this.socket = io(signalUri, {
-      transports: ['websocket'],
+      transports: ["websocket"],
       timeout: 3000,
       reconnection: true,
       reconnectionAttempts: Infinity,
@@ -24,21 +23,21 @@ class MasterManager {
     this.clientPeersConnecting = Object.create(null);
     this.clientCounter = 0;
 
-    this.socket.on('reconnect_attempt', () => {
-      this.socket.io.opts.transports = ['polling', 'websocket'];
+    this.socket.on("reconnect_attempt", () => {
+      this.socket.io.opts.transports = ["polling", "websocket"];
       this.onReconnectAttempt();
     });
 
     // Register signalling events
-    this.socket.on('create-peer', this.onCreatePeer);
-    this.socket.on('signal', this.onSignal);
-    this.socket.on('disconnect', this.onReconnectAttempt);
-    this.socket.on('reconnecting', this.onReconnectAttempt);
-    this.socket.on('reconnect', this.onReconnect);
+    this.socket.on("create-peer", this.onCreatePeer);
+    this.socket.on("signal", this.onSignal);
+    this.socket.on("disconnect", this.onReconnectAttempt);
+    this.socket.on("reconnecting", this.onReconnectAttempt);
+    this.socket.on("reconnect", this.onReconnect);
 
     // Emit session creation
-    this.socket.on('connect', () => {
-      this.socket.emit('create-session', { token }, ({ secret, error }) => {
+    this.socket.on("connect", () => {
+      this.socket.emit("create-session", { token }, ({ secret, error }) => {
         if (error) {
           cb(new Error(error));
         }
@@ -55,9 +54,9 @@ class MasterManager {
         this.peerStateCache = new Object(null);
 
         // Initialise state with slide-state
-        const spectacleSlideState = localStorage.getItem('spectacle-slide');
+        const spectacleSlideState = localStorage.getItem("spectacle-slide");
         if (spectacleSlideState) {
-          this.peerStateCache['spectacle-slide'] = data;
+          this.peerStateCache["spectacle-slide"] = data;
         }
 
         // Set initial status message
@@ -82,7 +81,7 @@ class MasterManager {
 
   onReconnectAttempt = () => {
     this.reconnecting = true;
-    this.setStatus('🛑  Reconnecting...');
+    this.setStatus("🛑  Reconnecting...");
   };
 
   onReconnect = () => {
@@ -91,9 +90,9 @@ class MasterManager {
     }
 
     const opts = { token: this.token, secret: this.secret };
-    this.socket.emit('resume-session', opts, ({ error }) => {
+    this.socket.emit("resume-session", opts, ({ error }) => {
       if (error) {
-        return this.setStatus('🔚  Session died');
+        return this.setStatus("🔚  Session died");
       }
 
       // Set initialisation flag and secret
@@ -113,11 +112,11 @@ class MasterManager {
 
     this.clientPeersConnecting[clientId] = peer;
 
-    peer.on('signal', data => {
-      this.socket.emit('signal', { clientId, data });
+    peer.on("signal", data => {
+      this.socket.emit("signal", { clientId, data });
     });
 
-    peer.on('connect', () => {
+    peer.on("connect", () => {
       delete this.clientPeersConnecting[clientId];
       this.clientPeers[clientId] = peer;
 
@@ -126,7 +125,7 @@ class MasterManager {
 
       let index = 1;
       const initState = (key, data) => {
-        const payload = JSON.stringify({ key, data, kind: 'localstorage' });
+        const payload = JSON.stringify({ key, data, kind: "localstorage" });
 
         // Wait for app to process & peer to 'calm down' before sending more
         setTimeout(() => {
@@ -140,7 +139,7 @@ class MasterManager {
       }
     });
 
-    peer.on('close', () => {
+    peer.on("close", () => {
       delete this.clientPeers[clientId];
       this.clientCounter--;
 
@@ -151,19 +150,20 @@ class MasterManager {
   };
 
   onSignal = ({ clientId, data }) => {
-    const peer = this.clientPeersConnecting[clientId] || this.clientPeers[clientId];
+    const peer =
+      this.clientPeersConnecting[clientId] || this.clientPeers[clientId];
     if (peer) {
       peer.signal(data);
     }
   };
 
-  _doSendEvent = (key, data, kind = 'localstorage') => {
+  _doSendEvent = (key, data, kind = "localstorage") => {
     const payload = JSON.stringify({ key, data, kind });
 
     for (const clientId in this.clientPeers) {
       try {
         const peer = this.clientPeers[clientId];
-        if (peer) {
+        if (peer && peer.connected) {
           peer.send(payload);
         }
       } catch (err) {
@@ -175,15 +175,15 @@ class MasterManager {
   onStorage = (key, data) => {
     // Cache all local storage changes per key
     this.peerStateCache[key] = data;
-    this._doSendEvent(key, data, 'localstorage');
+    this._doSendEvent(key, data, "localstorage");
   };
 
   sendEvent = (key, data) => {
-    this._doSendEvent(key, data, 'event');
+    this._doSendEvent(key, data, "event");
   };
 
   destroy = () => {
-    this.setStatus('🔚  Session closed');
+    this.setStatus("🔚  Session closed");
 
     if (!this.initialised) {
       return;
@@ -194,7 +194,9 @@ class MasterManager {
 
     for (const clientId in this.clientPeers) {
       const peer = this.clientPeers[clientId];
-      peer.destroy();
+      if (peer.connected) {
+        peer.destroy();
+      }
     }
   };
 }

@@ -1,8 +1,17 @@
-import React, { Component } from 'react';
-import { ConnectionMenu, Wrapper, TokenInput, Row, Button, StatusText, Status } from './styles';
-import createSlaveManager from './SlaveManager';
-import createMasterManager from './MasterManager';
-import SignalEffect from './SignalEffect';
+import React, { Fragment, Component } from "react";
+import {
+  ConnectionMenu,
+  Wrapper,
+  TokenInput,
+  Row,
+  Button,
+  StatusText,
+  Status
+} from "./styles";
+import createSlaveManager from "./SlaveManager";
+import createMasterManager from "./MasterManager";
+import SignalEffect from "./SignalEffect";
+import QRCode from "qrcode.react";
 
 const makeChannelName = token => `Spectacle:${token.toUpperCase()}`;
 
@@ -12,20 +21,30 @@ const initialState = () => ({
   isSlave: false,
   isConnected: false,
   showsClicks: false,
-  tokenInput: '',
-  status: '',
-  connectionStatus: '🔗'
+  tokenInput: "",
+  status: "",
+  connectionStatus: "🔗",
+  showShare: false
 });
 
 class NetworkSync extends Component {
   static defaultProps = {
-    signalUri: 'https://spectacle-signalling.now.sh'
+    signalUri: "https://spectacle-signalling.now.sh"
   };
 
   state = initialState();
 
+  componentDidMount = () => {
+    const tokenInput = new URLSearchParams(window.location.search).get(
+      "sessionToken"
+    );
+    if (tokenInput && !this.state.isConnected) {
+      this.setState({ tokenInput }, this.joinSession);
+    }
+  };
+
   onClickClose = () => {
-    this.setState({ showConnectionMenu: false });
+    this.setState({ showConnectionMenu: false, showShare: false });
   };
 
   onClickOpen = () => {
@@ -42,7 +61,7 @@ class NetworkSync extends Component {
 
   onTriggerSignal = evt => {
     if (this.masterManager) {
-      this.masterManager.sendEvent('signal', evt);
+      this.masterManager.sendEvent("signal", evt);
     }
   };
 
@@ -60,7 +79,7 @@ class NetworkSync extends Component {
 
     if (tokenInput.length !== 6) {
       return this.setState({
-        status: 'Invalid token 😢'
+        status: "Invalid token 😢"
       });
     }
 
@@ -69,7 +88,7 @@ class NetworkSync extends Component {
     }
 
     this.setState({
-      status: 'Connecting... 🌍',
+      status: "Connecting... 🌍",
       isSlave: true,
       isInputDisabled: true
     });
@@ -78,45 +97,55 @@ class NetworkSync extends Component {
       signalUri: this.props.signalUri,
       token: makeChannelName(tokenInput),
       setStatus: connectionStatus => this.setState({ connectionStatus })
-    }).then(slaveManager => {
-      this.setState({
-        isConnected: true,
-        status: 'Connected 🎉'
-      });
+    })
+      .then(slaveManager => {
+        this.setState({
+          isConnected: true,
+          status: "Connected 🎉"
+        });
 
-      const unsubscribe = slaveManager.subscribe((key, data) => {
-        if (key === 'signal' && this.signalRef && data.relativeX && data.relativeY) {
-          this.signalRef.startRipple(data.relativeX, data.relativeY);
-        }
-      });
+        const unsubscribe = slaveManager.subscribe((key, data) => {
+          if (
+            key === "signal" &&
+            this.signalRef &&
+            data.relativeX &&
+            data.relativeY
+          ) {
+            this.signalRef.startRipple(data.relativeX, data.relativeY);
+          }
+        });
 
-      this.endSession = () => {
-        unsubscribe();
-        slaveManager.destroy();
-        this.endSession = undefined;
+        this.endSession = () => {
+          unsubscribe();
+          slaveManager.destroy();
+          this.endSession = undefined;
 
-        if (this.props.onSlaveDisconnect) {
-          this.props.onSlaveDisconnect();
-        }
-      };
-    }).catch(err => {
-      this.setState({
-        isConnected: false,
-        isInputDisabled: false,
-        status: err.message
+          if (this.props.onSlaveDisconnect) {
+            this.props.onSlaveDisconnect();
+          }
+        };
+      })
+      .catch(err => {
+        this.setState({
+          isConnected: false,
+          isInputDisabled: false,
+          status: err.message
+        });
       });
-    });
   };
 
   createSession = () => {
-    const tokenInput = Math.random().toString(26).slice(-6).toUpperCase();
+    const tokenInput = Math.random()
+      .toString(26)
+      .slice(-6)
+      .toUpperCase();
 
     if (this.endSession) {
       this.endSession();
     }
 
     this.setState({
-      status: 'Connecting... 🌍',
+      status: "Connecting... 🌍",
       tokenInput,
       isSlave: false,
       isInputDisabled: true
@@ -126,26 +155,28 @@ class NetworkSync extends Component {
       signalUri: this.props.signalUri,
       token: makeChannelName(tokenInput),
       setStatus: connectionStatus => this.setState({ connectionStatus })
-    }).then(masterManager => {
-      this.setState({
-        isConnected: true,
-        status: 'Share the token with your viewers 📺'
-      });
+    })
+      .then(masterManager => {
+        this.setState({
+          isConnected: true,
+          status: "Share the token with your viewers 📺"
+        });
 
-      this.masterManager = masterManager;
+        this.masterManager = masterManager;
 
-      this.endSession = () => {
-        masterManager.destroy();
-        this.endSession = undefined;
-        this.masterManager = undefined;
-      };
-    }).catch(err => {
-      this.setState({
-        isConnected: false,
-        isInputDisabled: false,
-        status: err.message
+        this.endSession = () => {
+          masterManager.destroy();
+          this.endSession = undefined;
+          this.masterManager = undefined;
+        };
+      })
+      .catch(err => {
+        this.setState({
+          isConnected: false,
+          isInputDisabled: false,
+          status: err.message
+        });
       });
-    });
   };
 
   disconnect = () => {
@@ -153,7 +184,14 @@ class NetworkSync extends Component {
       this.endSession();
     }
 
-    this.setState(initialState());
+    this.setState({
+      ...initialState(),
+      showConnectionMenu: true
+    });
+  };
+
+  share = () => {
+    this.setState({ showShare: true });
   };
 
   componentWillUnmount() {
@@ -164,10 +202,17 @@ class NetworkSync extends Component {
 
   renderConnectionMenu() {
     const { isConnected, isSlave, showClicks } = this.state;
+    const shareableLink = `${window.location.origin}/?sessionToken=${
+      this.state.tokenInput
+    }`;
 
     return (
       <ConnectionMenu onClick={this.onClickClose}>
-        <Wrapper onClick={evt => { evt.stopPropagation() }}>
+        <Wrapper
+          onClick={evt => {
+            evt.stopPropagation();
+          }}
+        >
           <TokenInput
             type="text"
             placeholder="enter session token here"
@@ -177,21 +222,35 @@ class NetworkSync extends Component {
           />
 
           <Row>
-            {!isConnected && <Button onClick={this.joinSession}>Join Session</Button>}
-            {!isConnected && <Button onClick={this.createSession}>Create Session</Button>}
-
-            {isConnected && <Button onClick={this.disconnect}>Disconnect</Button>}
-
-            {isConnected && !isSlave && (
-              <Button onClick={this.toggleClickTransmission}>
-                {showClicks ? 'Hide Clicks' : 'Show Clicks'}
-              </Button>
+            {!isConnected && (
+              <Button onClick={this.joinSession}>Join Session</Button>
             )}
+            {!isConnected && (
+              <Button onClick={this.createSession}>Create Session</Button>
+            )}
+
+            {isConnected && (
+              <Button onClick={this.disconnect}>Disconnect</Button>
+            )}
+
+            {isConnected &&
+              !isSlave && (
+                <Button onClick={this.toggleClickTransmission}>
+                  {showClicks ? "Hide Clicks" : "Show Clicks"}
+                </Button>
+              )}
+
+            {isConnected && <Button onClick={this.share}>Share</Button>}
           </Row>
 
-          <StatusText>
-            {this.state.status}
-          </StatusText>
+          <StatusText capped>{this.state.status}</StatusText>
+
+          {this.state.showShare && (
+            <Fragment>
+              <StatusText>{shareableLink}</StatusText>
+              <QRCode value={shareableLink} />
+            </Fragment>
+          )}
         </Wrapper>
       </ConnectionMenu>
     );
@@ -200,7 +259,11 @@ class NetworkSync extends Component {
   renderStatus() {
     return this.state.connectionStatus ? (
       <Status onClick={this.onClickOpen}>
-        {`${this.state.connectionStatus}${this.state.isConnected ? ` | Session key: ${this.state.tokenInput}` : ''}`}
+        {`${this.state.connectionStatus}${
+          this.state.isConnected
+            ? ` | Session token: ${this.state.tokenInput}`
+            : ""
+        }`}
       </Status>
     ) : null;
   }

@@ -1,12 +1,12 @@
-import io from 'socket.io-client/dist/socket.io.slim';
-import Peer from 'simple-peer';
-import mitt from 'mitt';
-import { emitStorageEvent } from './localStorageHook';
+import io from "socket.io-client/dist/socket.io.slim";
+import Peer from "simple-peer";
+import mitt from "mitt";
+import { emitStorageEvent } from "./localStorageHook";
 
 class SlaveManager {
   constructor(token, signalUri, setStatus, cb) {
     this.socket = io(signalUri, {
-      transports: ['websocket'],
+      transports: ["websocket"],
       timeout: 3000,
       reconnection: true,
       reconnectionAttempts: Infinity,
@@ -25,14 +25,14 @@ class SlaveManager {
     this.emitter = mitt();
 
     // Register signalling events
-    this.socket.on('signal', this.onIncomingSignal);
+    this.socket.on("signal", this.onIncomingSignal);
 
-    this.socket.on('reconnect_attempt', () => {
-      this.socket.io.opts.transports = ['polling', 'websocket'];
+    this.socket.on("reconnect_attempt", () => {
+      this.socket.io.opts.transports = ["polling", "websocket"];
     });
 
     // Emit session join event
-    this.socket.emit('join-session', { token }, ({ error }) => {
+    this.socket.emit("join-session", { token }, ({ error }) => {
       if (error) {
         cb(new Error(error));
       }
@@ -42,8 +42,8 @@ class SlaveManager {
       this.token = token;
       this.attachPeer();
 
-      this.peer.on('connect', () => {
-        this.setStatus('Connected');
+      this.peer.on("connect", () => {
+        this.setStatus("Connected");
         cb();
       });
     });
@@ -62,42 +62,42 @@ class SlaveManager {
   }
 
   attachPeer = () => {
-    this.peer.on('signal', this.onOutgoingSignal);
+    this.peer.on("signal", this.onOutgoingSignal);
 
-    this.peer.on('close', () => {
-      this.setStatus('Reconnecting...');
+    this.peer.on("close", () => {
+      this.setStatus("Reconnecting...");
       this.peer.destroy();
       this.reconnect();
     });
 
-    this.peer.on('data', this.onData);
+    this.peer.on("data", this.onData);
   };
 
   subscribe = cb => {
-    this.emitter.on('*', cb);
-    return () => this.emitter.off('*', cb);
+    this.emitter.on("*", cb);
+    return () => this.emitter.off("*", cb);
   };
 
   onData = payload => {
     try {
       const { key, data, kind } = JSON.parse(payload);
 
-      if (kind === 'localstorage') {
+      if (kind === "localstorage") {
         emitStorageEvent(key, data);
-      } else if (kind === 'event') {
+      } else if (kind === "event") {
         this.emitter.emit(key, data);
       }
     } catch (err) {
       console.error(`Error parsing master payload`, err);
     }
-  }
+  };
 
   onIncomingSignal = ({ data }) => {
     this.peer.signal(data);
   };
 
-  onOutgoingSignal = (data) => {
-    this.socket.emit('signal', { data });
+  onOutgoingSignal = data => {
+    this.socket.emit("signal", { data });
   };
 
   reconnect = () => {
@@ -106,14 +106,14 @@ class SlaveManager {
       this.peer = new Peer({});
       this.attachPeer();
 
-      this.peer.on('connect', () => {
-        this.setStatus('Connected');
+      this.peer.on("connect", () => {
+        this.setStatus("Connected");
       });
     }
 
     const opts = { token: this.token };
 
-    this.socket.emit('join-session', opts, ({ error, tryagain }) => {
+    this.socket.emit("join-session", opts, ({ error, tryagain }) => {
       if (error && tryagain) {
         return setTimeout(this.reconnect, 1000);
       } else if (error) {
@@ -126,7 +126,7 @@ class SlaveManager {
 
   destroy = () => {
     this.socket.close();
-    this.setStatus('Disconnected');
+    this.setStatus("Disconnected");
 
     if (this.initialised) {
       this.peer.destroy();
